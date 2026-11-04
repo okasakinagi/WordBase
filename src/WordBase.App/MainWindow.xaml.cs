@@ -113,6 +113,23 @@ public sealed partial class MainWindow : Window
 
     public void RefreshCurrent() => ContentFrame.Navigate(TagToPage(CurrentTag));
 
+    /// <summary>
+    /// 在主窗口的「复习」页里开始复习。复习不再开独立窗口，
+    /// 这样图标、主题、导航都和主界面一致。
+    /// </summary>
+    public void ShowReview(long? entryId = null, bool? presetKnown = null)
+    {
+        if (ContentFrame.Content is not ReviewPage)
+        {
+            Select("review");
+        }
+
+        if (ContentFrame.Content is ReviewPage page)
+        {
+            page.BeginSession(entryId, presetKnown);
+        }
+    }
+
     private static Type TagToPage(string? tag) => tag switch
     {
         "library" => typeof(LibraryPage),

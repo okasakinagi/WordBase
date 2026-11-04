@@ -9,7 +9,6 @@ namespace WordBase.App;
 
 public partial class App : Application
 {
-    private ReviewSessionWindow? _reviewWindow;
 
     public App()
     {
@@ -173,36 +172,13 @@ public partial class App : Application
 
     public static void StartReviewSession(long? entryId = null, bool? presetKnown = null)
     {
-        var app = Current as App;
-        if (app is null)
+        if (MainWindowInstance is null)
         {
             return;
         }
 
-        if (app._reviewWindow is not null)
-        {
-            try
-            {
-                app._reviewWindow.Activate();
-                return;
-            }
-            catch (Exception)
-            {
-                app._reviewWindow = null;
-            }
-        }
-
-        var window = new ReviewSessionWindow();
-        app._reviewWindow = window;
-        window.Completed += () =>
-        {
-            app._reviewWindow = null;
-            MainWindowInstance.RefreshCurrent();
-        };
-        window.Closed += (_, _) => app._reviewWindow = null;
-
-        window.ViewModel.Start(entryId, presetKnown);
-        window.Activate();
+        MainWindowInstance.ShowAndActivate();
+        MainWindowInstance.ShowReview(entryId, presetKnown);
     }
 
     private void ExitApp()
