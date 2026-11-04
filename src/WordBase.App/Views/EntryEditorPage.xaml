@@ -136,7 +136,7 @@
                 <!-- 例句 -->
                 <StackPanel Spacing="6">
                     <TextBlock Text="例句（必填，词性写在例句上）" FontWeight="SemiBold" />
-                    <TextBlock Text="目标：每个「读音 × 词性」至少 2 条。手动录入不足只警告，不阻止保存。"
+                    <TextBlock Text="目标：每个「读音 × 词性」至少 2 条。凑不满时让模型说明原因；手动录入不足只警告，不阻止保存。"
                                Opacity="0.65" FontSize="12" />
                     <ItemsControl ItemsSource="{Binding Examples}">
                         <ItemsControl.ItemTemplate>
@@ -149,6 +149,7 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
@@ -170,11 +171,17 @@
                                     <TextBox Grid.Row="1" Grid.Column="3" Width="260"
                                              Text="{Binding Translation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                              PlaceholderText="译文 / 解释" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="60" />
+
+                                    <TextBox Grid.Row="2" Grid.ColumnSpan="4" FontSize="12"
+                                             Text="{Binding Note, Mode=TwoWay}"
+                                             PlaceholderText="备注（模型说明「为什么只有一条例句」时会写在这里）" />
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <Button Content="＋ 添加例句" Click="OnAddExampleClick" HorizontalAlignment="Left" />
+                    <Button Content="让模型补齐例句" Click="OnTopUpClick" HorizontalAlignment="Left"
+                            Visibility="{Binding TopUpVisibility}" />
                 </StackPanel>
 
                 <Border Padding="12" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">

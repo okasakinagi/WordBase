@@ -34,6 +34,7 @@ public sealed partial class ExampleRowViewModel : ObservableObject
     [ObservableProperty] private string text = string.Empty;
     [ObservableProperty] private string? translation;
     [ObservableProperty] private string? partOfSpeech;
+    [ObservableProperty] private string? note;
     [ObservableProperty] private bool isVerified = true;
     [ObservableProperty] private ReadingOption? selectedReading;
 

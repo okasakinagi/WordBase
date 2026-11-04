@@ -92,6 +92,8 @@ public sealed partial class EntryEditorPage : Page
 
     private async void OnLlmClick(object sender, RoutedEventArgs e) => await ViewModel.FillWithLlmAsync();
 
+    private async void OnTopUpClick(object sender, RoutedEventArgs e) => await ViewModel.TopUpExamplesAsync();
+
     private void OnCopyPromptClick(object sender, RoutedEventArgs e)
     {
         var package = new DataPackage();

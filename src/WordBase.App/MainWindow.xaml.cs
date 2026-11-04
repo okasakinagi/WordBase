@@ -15,6 +15,7 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         SizeToWorkArea();
+        ApplyWindowIcon();
         AppWindow.Closing += OnClosing;
 
         if (AppWindow.Presenter is OverlappedPresenter presenter)
@@ -24,6 +25,23 @@ public sealed partial class MainWindow : Window
         }
 
         Select("editor");
+    }
+
+    /// <summary>未打包应用不会自动继承 exe 图标，这里显式设一次，保证任务栏和标题栏一致。</summary>
+    private void ApplyWindowIcon()
+    {
+        try
+        {
+            var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
+            if (File.Exists(icon))
+            {
+                AppWindow.SetIcon(icon);
+            }
+        }
+        catch (Exception ex)
+        {
+            App.Host?.Logger.Warn($"设置窗口图标失败：{ex.Message}");
+        }
     }
 
     /// <summary>按显示器工作区取一个合适的尺寸，避免高 DPI 下窗口过小或超出屏幕。</summary>

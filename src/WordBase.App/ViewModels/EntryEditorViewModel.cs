@@ -58,6 +58,7 @@ public sealed partial class EntryEditorViewModel : ObservableObject
     [ObservableProperty] private Visibility duplicateVisibility = Visibility.Collapsed;
     [ObservableProperty] private Visibility editorVisibility = Visibility.Collapsed;
     [ObservableProperty] private Visibility busyVisibility = Visibility.Collapsed;
+    [ObservableProperty] private Visibility topUpVisibility = Visibility.Collapsed;
     [ObservableProperty] private string llmButtonText = "用大模型填充";
 
     public EntryKind CurrentKind => KindIndex == 1 ? EntryKind.Grammar : EntryKind.Word;
@@ -209,7 +210,6 @@ public sealed partial class EntryEditorViewModel : ObservableObject
         }
 
         KindIndex = entry.Kind == EntryKind.Grammar ? 1 : 0;
-
         Readings.Clear();
         foreach (var reading in entry.Readings)
         {
@@ -251,6 +251,7 @@ public sealed partial class EntryEditorViewModel : ObservableObject
                 Text = example.Text,
                 Translation = example.Translation,
                 PartOfSpeech = example.PartOfSpeech,
+                Note = example.Note,
                 IsVerified = example.IsVerified,
                 SelectedReading = null,
             });
@@ -395,6 +396,7 @@ public sealed partial class EntryEditorViewModel : ObservableObject
                 PartOfSpeech = row.PartOfSpeech,
                 Text = row.Text.Trim(),
                 Translation = row.Translation,
+                Note = row.Note,
                 Source = _pendingReplacement?.Source ?? EntrySource.Manual,
                 IsVerified = row.IsVerified,
                 Ordinal = entry.Examples.Count,
@@ -415,11 +417,218 @@ public sealed partial class EntryEditorViewModel : ObservableObject
         var errors = result.Errors.Select(e => "✕ " + e.Message).ToList();
         ValidationSummary = string.Join(Environment.NewLine, errors.Concat(warnings));
 
+        var target = _host.Settings.ExamplesPerReadingPos;
         CoverageSummary = coverage.Count == 0
             ? "例句覆盖：暂无"
-            : "例句覆盖（目标 2 条/格）：" + string.Join("；", coverage.Select(c => c.Display));
+            : $"例句覆盖（目标 {target} 条/格）：" + string.Join("；", coverage.Select(c => c.Display));
+
+        var gaps = ComputeGaps();
+        var readyForTopUp = gaps.Count > 0 &&
+                            !string.IsNullOrWhiteSpace(Term) &&
+                            Senses.Any(s => !string.IsNullOrWhiteSpace(s.Gloss));
+        TopUpVisibility = readyForTopUp ? Visibility.Visible : Visibility.Collapsed;
 
         return result;
+    }
+
+    /// <summary>算出每个「读音 × 词性」还差几条例句，用于第二轮补例句请求。</summary>
+    public IReadOnlyList<ExampleGap> ComputeGaps()
+    {
+        var target = _host.Settings.ExamplesPerReadingPos;
+        var entry = BuildEntry();
+        var cells = _host.Vocabulary.Validator.Coverage(entry);
+
+        return cells
+            .Where(c => c.Count < target)
+            .Select(c => new ExampleGap(c.Reading, c.PartOfSpeech, c.Count, target - c.Count))
+            .ToList();
+    }
+
+    /// <summary>
+    /// 只补例句的第二轮请求。凑不满时模型会按提示词说明原因，这里如实汇报还差什么，
+    /// 而不是假装补齐了。
+    /// </summary>
+    public async Task TopUpExamplesAsync()
+    {
+        var gaps = ComputeGaps();
+        if (gaps.Count == 0)
+        {
+            StatusMessage = "例句数量已经达到目标，不需要补充。";
+            return;
+        }
+
+        if (!_host.Settings.LlmEnabled)
+        {
+            CopyTopUpPrompt(gaps);
+            return;
+        }
+
+        IsBusy = true;
+        StatusMessage = "正在请求模型补充例句…";
+        try
+        {
+            using var client = _host.CreateLlmClient();
+            var raw = await client.CompleteAsync(
+                ExampleTopUpPromptBuilder.SystemPrompt(),
+                ExampleTopUpPromptBuilder.UserPrompt(Term, Language, gaps, BuildGlossMap()));
+
+            ApplyTopUpResult(raw);
+        }
+        catch (LlmException ex)
+        {
+            StatusMessage = "补例句失败：" + ex.Message + Environment.NewLine + "可以手动补，或复制提示词去网页版。";
+        }
+        catch (Exception ex)
+        {
+            _host.Logger.Error("补例句失败", ex);
+            StatusMessage = "补例句失败：" + ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    public void CopyTopUpPrompt(IReadOnlyList<ExampleGap>? gaps = null)
+    {
+        gaps ??= ComputeGaps();
+        if (gaps.Count == 0)
+        {
+            StatusMessage = "例句数量已经达到目标，不需要补充。";
+            return;
+        }
+
+        var text = ExampleTopUpPromptBuilder.ClipboardPrompt(Term, Language, gaps);
+        var package = new Windows.ApplicationModel.DataTransfer.DataPackage();
+        package.SetText(text);
+        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(package);
+        StatusMessage = "补例句的提示词已复制。发给网页版模型后，把返回内容粘到下面的框里，点「解析并填入表单」即可——会自动识别为补例句。";
+    }
+
+    private IReadOnlyDictionary<string, string[]> BuildGlossMap()
+    {
+        var map = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        foreach (var reading in Readings.Where(r => !string.IsNullOrWhiteSpace(r.Text)))
+        {
+            var glosses = Senses
+                .Where(s => s.SelectedReading?.Id == reading.Id && !string.IsNullOrWhiteSpace(s.Gloss))
+                .Select(s => s.Gloss.Trim())
+                .ToArray();
+
+            if (glosses.Length > 0)
+            {
+                map[reading.Text.Trim()] = glosses;
+            }
+        }
+
+        var unbound = Senses
+            .Where(s => s.SelectedReading is null && !string.IsNullOrWhiteSpace(s.Gloss))
+            .Select(s => s.Gloss.Trim())
+            .ToArray();
+
+        if (unbound.Length > 0)
+        {
+            map[string.Empty] = unbound;
+        }
+
+        return map;
+    }
+
+    /// <summary>把补到的例句追加到表单末尾；同文重复的跳过，并按缺口截断（多给的不收）。</summary>
+    public int MergeAdditions(IReadOnlyList<ExampleAddition> additions, IReadOnlyList<ExampleGap>? gaps = null)
+    {
+        var existing = new HashSet<string>(
+            Examples.Where(e => !string.IsNullOrWhiteSpace(e.Text))
+                .Select(e => Core.Text.TermNormalizer.Normalize(e.Text)),
+            StringComparer.Ordinal);
+
+        // 缺口预算：模型偶尔会多给，这里按「还差几条」封顶，避免无意义堆积
+        var budget = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var gap in gaps ?? Array.Empty<ExampleGap>())
+        {
+            budget[BucketKey(gap.Reading, gap.PartOfSpeech)] = gap.Need;
+        }
+
+        var added = 0;
+        foreach (var addition in additions)
+        {
+            var key = Core.Text.TermNormalizer.Normalize(addition.Text);
+            if (key.Length == 0 || !existing.Add(key))
+            {
+                continue;
+            }
+
+            var bucket = BucketKey(addition.Reading, addition.PartOfSpeech);
+            if (budget.TryGetValue(bucket, out var left))
+            {
+                if (left <= 0)
+                {
+                    continue;
+                }
+
+                budget[bucket] = left - 1;
+            }
+
+            var readingRow = MatchReading(addition.Reading);
+            Examples.Add(new ExampleRowViewModel
+            {
+                Text = addition.Text,
+                Translation = addition.Translation,
+                PartOfSpeech = string.IsNullOrWhiteSpace(addition.PartOfSpeech) ? null : addition.PartOfSpeech,
+                Note = addition.Note,
+                IsVerified = false,
+                SelectedReading = readingRow?.Id is { } id
+                    ? new ReadingOption(id, readingRow.Text.Trim())
+                    : null,
+            });
+            added++;
+        }
+
+        RefreshReadingOptions();
+        return added;
+    }
+
+    private static string BucketKey(string? reading, string? pos) =>
+        $"{Core.Text.TermNormalizer.Normalize(reading)}|{Core.Text.TermNormalizer.Normalize(pos)}";
+
+    private ReadingRowViewModel? MatchReading(string? reading)
+    {
+        var key = Core.Text.TermNormalizer.Normalize(reading);
+        if (key.Length == 0)
+        {
+            return null;
+        }
+
+        return Readings.FirstOrDefault(r => Core.Text.TermNormalizer.Normalize(r.Text) == key);
+    }
+
+    private void ApplyTopUpResult(string raw)
+    {
+        var parsed = ExampleTopUpParser.Parse(raw);
+        if (!parsed.Ok)
+        {
+            StatusMessage = "补例句解析失败：" + parsed.Error;
+            return;
+        }
+
+        var gaps = ComputeGaps();
+        var added = MergeAdditions(parsed.Additions, gaps);
+        var remaining = ComputeGaps();
+        Validate();
+
+        if (remaining.Count == 0)
+        {
+            StatusMessage = $"已补入 {added} 条例句，现在每个「读音 × 词性」都达到目标了。请核对内容后保存。";
+            return;
+        }
+
+        var still = string.Join("；", remaining.Select(g =>
+            $"{(string.IsNullOrEmpty(g.Reading) ? "（无读音）" : g.Reading)} · " +
+            $"{(string.IsNullOrEmpty(g.PartOfSpeech) ? "未标词性" : g.PartOfSpeech)} 还差 {g.Need} 条"));
+
+        StatusMessage = added == 0
+            ? "模型没有补出新的例句。" + Environment.NewLine + "还差：" + still + Environment.NewLine + "可以再试一次，或手动补。"
+            : $"已补入 {added} 条例句，但仍有缺口：{still}。可以再点一次「补齐例句」，或手动补。";
     }
 
     public SaveResult Save()
@@ -495,6 +704,14 @@ public sealed partial class EntryEditorViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(PasteText))
         {
             StatusMessage = "请先把大模型返回的内容粘贴到下面的框里。";
+            return;
+        }
+
+        // 自动识别：带 additions 的是「补例句」的回复，其余按词条解析
+        var json = EntryJsonParser.ExtractJsonObject(PasteText);
+        if (json is not null && json.Contains("\"additions\"", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyTopUpResult(PasteText);
             return;
         }
 
