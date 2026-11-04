@@ -266,13 +266,13 @@ public class StoreIntegrationTests
         var settings = new AppSettings(fixture.Settings);
         settings.DefaultLanguage = "ja";
         settings.QuizProbability = 0.4;
-        settings.QuietStart = new TimeOnly(9, 30);
+        settings.ActiveStart = new TimeOnly(9, 30);
 
         var reloaded = new AppSettings(new SettingsStore(fixture.Db));
         Assert.Equal("ja", reloaded.DefaultLanguage);
         Assert.Equal(0.4, reloaded.QuizProbability, 3);
-        Assert.Equal(new TimeOnly(9, 30), reloaded.QuietStart);
-        Assert.True(reloaded.IsQuietNow(new DateTimeOffset(2026, 11, 4, 10, 0, 0, TimeSpan.FromHours(8))));
-        Assert.False(reloaded.IsQuietNow(new DateTimeOffset(2026, 11, 4, 23, 30, 0, TimeSpan.FromHours(8))));
+        Assert.Equal(new TimeOnly(9, 30), reloaded.ActiveStart);
+        Assert.True(reloaded.IsWithinActiveHours(new DateTimeOffset(2026, 11, 4, 10, 0, 0, TimeSpan.FromHours(8))));
+        Assert.False(reloaded.IsWithinActiveHours(new DateTimeOffset(2026, 11, 4, 23, 30, 0, TimeSpan.FromHours(8))));
     }
 }

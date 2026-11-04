@@ -14,11 +14,14 @@
     <LangVersion>latest</LangVersion>
     <WindowsPackageType>None</WindowsPackageType>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <EnableMsixTooling>false</EnableMsixTooling>
+    <EnableMsixTooling>true</EnableMsixTooling>
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyTitle>WordBase</AssemblyTitle>
     <Product>WordBase</Product>
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+    <!-- MVVMTK0045：本工程不使用 AOT 发布，也不使用 x:Bind，故不需要 partial property 的 WinRT 编组 -->
+    <NoWarn>$(NoWarn);MVVMTK0045</NoWarn>
   </PropertyGroup>
 
   <!-- WinUI3 不支持 trimming -->
@@ -36,6 +39,12 @@
     <ProjectReference Include="..\WordBase.Core\WordBase.Core.csproj" />
     <ProjectReference Include="..\WordBase.Data\WordBase.Data.csproj" />
     <ProjectReference Include="..\WordBase.Llm\WordBase.Llm.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\app.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

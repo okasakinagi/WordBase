@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 
 namespace WordBase.Llm;
 
-public interface ILlmClient
+public interface ILlmClient : IDisposable
 {
     Task<string> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken cancellationToken = default);
 

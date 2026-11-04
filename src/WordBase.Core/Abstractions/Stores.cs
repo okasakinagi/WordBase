@@ -29,6 +29,8 @@ public interface IEntryStore
 
     IReadOnlyList<string> GetDistractorGlosses(string language, long excludeEntryId, int limit);
 
+    IReadOnlyList<WordBase.Core.Quizzing.Distractor> GetDistractorOptions(string language, long excludeEntryId, int limit);
+
     void SaveReview(ReviewState state, ReviewLog log);
 
     void RecordConfusion(long entryId, long otherEntryId, DateTimeOffset now);

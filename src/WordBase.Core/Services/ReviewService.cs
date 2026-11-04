@@ -41,7 +41,7 @@ public sealed class ReviewService
 
     public QuizQuestion? BuildQuiz(Entry entry, int optionCount = 4, Random? rng = null)
     {
-        var distractors = _store.GetDistractorGlosses(entry.Language, entry.Id, 40);
+        var distractors = _store.GetDistractorOptions(entry.Language, entry.Id, 40);
         return QuizBuilder.Build(entry, distractors, optionCount, rng);
     }
 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="WordBase.App.Views.PromptWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="WordBase">
+
+    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1"
+            Padding="18" CornerRadius="10">
+        <StackPanel Spacing="10">
+            <TextBlock Text="WordBase · 该复习了" Opacity="0.6" FontSize="12" />
+            <TextBlock x:Name="TermText" FontSize="28" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock x:Name="ReadingText" Opacity="0.7" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                <Button Content="不认识" Click="OnUnknownClick" MinWidth="100" />
+                <Button Content="认识" Click="OnKnownClick" MinWidth="100"
+                        Style="{StaticResource AccentButtonStyle}" />
+            </StackPanel>
+            <TextBlock x:Name="HintText" Text="25 秒后自动收起" Opacity="0.45" FontSize="11" />
+        </StackPanel>
+    </Border>
+</Window>

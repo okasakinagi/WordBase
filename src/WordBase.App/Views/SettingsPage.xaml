@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="WordBase.App.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="24" Spacing="14" MaxWidth="900" HorizontalAlignment="Left">
+
+            <TextBlock Text="设置" Style="{StaticResource TitleTextBlockStyle}" />
+
+            <!-- 大模型 -->
+            <Expander Header="大模型（OpenAI 兼容接口）" IsExpanded="True" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="10" Padding="0,10">
+                    <TextBlock Text="可填 OpenAI / DeepSeek / 硅基流动 / OpenRouter / Ollama / LM Studio 等任意兼容 /chat/completions 的服务。"
+                               Opacity="0.65" FontSize="12" TextWrapping="Wrap" />
+                    <Grid ColumnSpacing="8" RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="BaseUrl" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1" Text="{Binding LlmBaseUrl, Mode=TwoWay}"
+                                 PlaceholderText="https://api.openai.com/v1" />
+
+                        <TextBlock Grid.Row="1" Text="模型" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LlmModel, Mode=TwoWay}"
+                                 PlaceholderText="gpt-4o-mini / deepseek-chat / qwen2.5:7b" />
+
+                        <TextBlock Grid.Row="2" Text="API Key" VerticalAlignment="Center" />
+                        <PasswordBox Grid.Row="2" Grid.Column="1" x:Name="ApiKeyBox"
+                                     Password="{Binding ApiKey, Mode=TwoWay}" PlaceholderText="本地模型可以留空" />
+
+                        <TextBlock Grid.Row="3" Text="温度 / 超时" VerticalAlignment="Center" />
+                        <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <NumberBox Value="{Binding LlmTemperature, Mode=TwoWay}" Minimum="0" Maximum="2"
+                                       SmallChange="0.1" SpinButtonPlacementMode="Compact" Width="120" />
+                            <NumberBox Value="{Binding LlmTimeoutSeconds, Mode=TwoWay}" Minimum="10" Maximum="600"
+                                       SmallChange="10" SpinButtonPlacementMode="Compact" Width="140" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="4" Text="选项" VerticalAlignment="Center" />
+                        <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="16">
+                            <ToggleSwitch IsOn="{Binding LlmEnabled, Mode=TwoWay}" OnContent="启用" OffContent="停用" MinWidth="0" />
+                            <ToggleSwitch IsOn="{Binding LlmJsonMode, Mode=TwoWay}" OnContent="要求 JSON 模式" OffContent="文本模式" MinWidth="0" />
+                            <ToggleSwitch IsOn="{Binding PersistApiKey, Mode=TwoWay}" OnContent="保存密钥" OffContent="不保存" MinWidth="0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="密钥用 DPAPI 加密，绑定当前 Windows 用户；换机器或换用户后需要重新填写，这是刻意的安全设计。"
+                               Opacity="0.6" FontSize="12" TextWrapping="Wrap" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="测试连接" Click="OnTestLlmClick" />
+                        <Button Content="保存设置" Style="{StaticResource AccentButtonStyle}" Click="OnSaveClick" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding LlmStatus}" TextWrapping="Wrap" IsTextSelectionEnabled="True" Opacity="0.85" />
+                </StackPanel>
+            </Expander>
+
+            <!-- 复习 -->
+            <Expander Header="复习节奏" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="10" Padding="0,10">
+                    <Grid ColumnSpacing="8" RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="180" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="目标保持率 (%)" VerticalAlignment="Center" />
+                        <NumberBox Grid.Column="1" Value="{Binding DesiredRetentionPercent, Mode=TwoWay}"
+                                   Minimum="70" Maximum="98" SmallChange="1" Width="110" SpinButtonPlacementMode="Compact" />
+                        <TextBlock Grid.Column="2" Text="到期时预计还能记住的比例，越高复习越频繁。" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
+
+                        <TextBlock Grid.Row="1" Text="「认识」后抽测概率 (%)" VerticalAlignment="Center" />
+                        <NumberBox Grid.Row="1" Grid.Column="1" Value="{Binding QuizProbabilityPercent, Mode=TwoWay}"
+                                   Minimum="0" Maximum="100" SmallChange="5" Width="110" SpinButtonPlacementMode="Compact" />
+                        <TextBlock Grid.Row="1" Grid.Column="2" Text="没抽中做选择题时按 70% 置信度记账。" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
+
+                        <TextBlock Grid.Row="2" Text="每日复习上限" VerticalAlignment="Center" />
+                        <NumberBox Grid.Row="2" Grid.Column="1" Value="{Binding DailyLimit, Mode=TwoWay}"
+                                   Minimum="1" Maximum="1000" SmallChange="5" Width="110" SpinButtonPlacementMode="Compact" />
+
+                        <TextBlock Grid.Row="3" Text="每小时通知上限" VerticalAlignment="Center" />
+                        <NumberBox Grid.Row="3" Grid.Column="1" Value="{Binding MaxPerHour, Mode=TwoWay}"
+                                   Minimum="1" Maximum="120" SmallChange="1" Width="110" SpinButtonPlacementMode="Compact" />
+
+                        <TextBlock Grid.Row="4" Text="两次通知最小间隔（分钟）" VerticalAlignment="Center" />
+                        <NumberBox Grid.Row="4" Grid.Column="1" Value="{Binding MinBetweenMinutes, Mode=TwoWay}"
+                                   Minimum="1" Maximum="600" SmallChange="5" Width="110" SpinButtonPlacementMode="Compact" />
+
+                        <TextBlock Grid.Row="5" Text="允许提醒的时段" VerticalAlignment="Center" />
+                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <TextBox Text="{Binding QuietStart, Mode=TwoWay}" Width="70" PlaceholderText="08:00" />
+                            <TextBlock Text="—" VerticalAlignment="Center" />
+                            <TextBox Text="{Binding QuietEnd, Mode=TwoWay}" Width="70" PlaceholderText="23:00" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Expander>
+
+            <!-- 通知 -->
+            <Expander Header="通知" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="10" Padding="0,10">
+                    <ComboBox ItemsSource="{Binding Channels}" SelectedIndex="{Binding ChannelIndex, Mode=TwoWay}"
+                              HorizontalAlignment="Stretch" />
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <ToggleSwitch IsOn="{Binding NotificationsPaused, Mode=TwoWay}" OnContent="提醒已暂停"
+                                      OffContent="提醒运行中" MinWidth="0" />
+                        <Button Content="发送测试通知并自检" Click="OnSelfTestClick" />
+                        <Button Content="刷新诊断" Click="OnRefreshDiagnosticsClick" />
+                    </StackPanel>
+                    <Border Padding="12" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                        <TextBlock Text="{Binding NotificationStatus}" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                                   FontFamily="Consolas" FontSize="12" />
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+            <!-- 系统 -->
+            <Expander Header="系统与数据" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="10" Padding="0,10">
+                    <StackPanel Orientation="Horizontal" Spacing="20">
+                        <ToggleSwitch IsOn="{Binding Autostart, Mode=TwoWay}" OnContent="开机自启" OffContent="不开机自启" MinWidth="0" />
+                        <ToggleSwitch IsOn="{Binding StartMinimized, Mode=TwoWay}" OnContent="启动后最小化到托盘"
+                                      OffContent="启动时显示窗口" MinWidth="0" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding PortableHint}" TextWrapping="Wrap" Opacity="0.7" FontSize="12" />
+                    <TextBlock Text="{Binding DataDirectory}" TextWrapping="Wrap" IsTextSelectionEnabled="True"
+                               FontFamily="Consolas" FontSize="12" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="打开数据目录" Click="OnOpenDataFolderClick" />
+                        <Button Content="导出备份" Click="OnExportClick" />
+                        <Button Content="导入备份" Click="OnImportClick" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding GeneralStatus}" TextWrapping="Wrap" IsTextSelectionEnabled="True" Opacity="0.85" />
+                </StackPanel>
+            </Expander>
+
+            <Button Content="保存全部设置" Style="{StaticResource AccentButtonStyle}" Click="OnSaveClick" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>

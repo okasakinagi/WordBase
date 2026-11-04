@@ -390,6 +390,31 @@ public sealed class EntryStore : IEntryStore
         return list;
     }
 
+    public IReadOnlyList<WordBase.Core.Quizzing.Distractor> GetDistractorOptions(string language, long excludeEntryId, int limit)
+    {
+        using var connection = _db.Open();
+        using var cmd = connection.CreateCommand();
+        cmd.CommandText = """
+            SELECT s.gloss, e.id FROM sense s
+            JOIN entry e ON e.id = s.entry_id
+            WHERE e.language = $lang AND e.id <> $id AND TRIM(s.gloss) <> ''
+            ORDER BY RANDOM()
+            LIMIT $limit;
+            """;
+        cmd.Parameters.AddWithValue("$lang", language);
+        cmd.Parameters.AddWithValue("$id", excludeEntryId);
+        cmd.Parameters.AddWithValue("$limit", limit);
+
+        var list = new List<WordBase.Core.Quizzing.Distractor>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            list.Add(new WordBase.Core.Quizzing.Distractor(reader.GetString(0), reader.GetInt64(1)));
+        }
+
+        return list;
+    }
+
     public void SaveReview(ReviewState state, ReviewLog log)
     {
         using var connection = _db.Open();

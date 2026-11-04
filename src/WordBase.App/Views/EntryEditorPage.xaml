@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="WordBase.App.Views.EntryEditorPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="mc">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="24" Spacing="14" HorizontalAlignment="Stretch">
+
+            <TextBlock Text="录入 / 查词" Style="{StaticResource TitleTextBlockStyle}" />
+            <TextBlock Text="先查词：已有记录会提示并记录一次遇见；没有记录才进入录入。"
+                       Opacity="0.7" />
+
+            <Grid ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Width="112" ItemsSource="{Binding LanguageDisplays}"
+                          SelectedIndex="{Binding LanguageIndex, Mode=TwoWay}" />
+                <ComboBox Grid.Column="1" Width="104" ItemsSource="{Binding Kinds}"
+                          SelectedIndex="{Binding KindIndex, Mode=TwoWay}" />
+                <TextBox Grid.Column="2" FontSize="17" Padding="10,6"
+                         PlaceholderText="输入要查 / 要录的词条，例如：生 / ubiquity / 〜てもいい"
+                         Text="{Binding Term, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="OnTermKeyDown" />
+                <Button Grid.Column="3" Content="查询" Style="{StaticResource AccentButtonStyle}"
+                        Click="OnSearchClick" Height="36" MinWidth="88" />
+            </Grid>
+
+            <InfoBar IsOpen="True" IsClosable="False" Severity="Informational"
+                     Message="{Binding StatusMessage}" />
+
+            <!-- 已录入：提示重复 + 展示已有内容 -->
+            <Border Visibility="{Binding DuplicateVisibility}" CornerRadius="8" Padding="16"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="该词条已录入" FontWeight="SemiBold" Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                    <TextBlock Text="{Binding DuplicateHeader}" FontSize="20" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding DuplicateDetail}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                    <TextBlock Text="{Binding DuplicateExamples}" Opacity="0.7" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="再记一次遇见（加强复习）" Click="OnRecordEncounterClick" />
+                        <Button Content="清空，换一个词" Click="OnResetClick" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- 未录入：录入表单 -->
+            <StackPanel Visibility="{Binding EditorVisibility}" Spacing="14">
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding EditorHeader}" Style="{StaticResource SubtitleTextBlockStyle}"
+                               VerticalAlignment="Center" />
+                    <ProgressRing Grid.Column="1" IsActive="{Binding IsBusy}" Width="22" Height="22" />
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="用大模型填充" Style="{StaticResource AccentButtonStyle}" Click="OnLlmClick" />
+                    <Button Content="复制提示词（网页版粘贴用）" Click="OnCopyPromptClick" />
+                    <Button Content="手动录入（清空表单）" Click="OnResetClick" />
+                </StackPanel>
+
+                <Expander Header="粘贴大模型回复 → 解析并预填表单" HorizontalAlignment="Stretch">
+                    <StackPanel Spacing="8" Padding="0,8">
+                        <TextBox Height="150" AcceptsReturn="True" TextWrapping="Wrap"
+                                 PlaceholderText="把网页版模型的回复整段粘进来（带不带 ```json 都可以）"
+                                 Text="{Binding PasteText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                        <Button Content="解析并填入表单" Click="OnParsePasteClick"
+                                HorizontalAlignment="Left" />
+                    </StackPanel>
+                </Expander>
+
+                <!-- 读音 -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="读音（同形异读可以加多条，例如 生：せい / なま）" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding Readings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="2*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             PlaceholderText="读音 / 假名 / 音标（英语可留空）" TextChanged="OnReadingTextChanged" />
+                                    <ToggleSwitch Grid.Column="1" IsOn="{Binding IsCommon, Mode=TwoWay}"
+                                                  OnContent="常用" OffContent="少见" MinWidth="0" />
+                                    <TextBox Grid.Column="2" Text="{Binding Note, Mode=TwoWay}" PlaceholderText="备注（可选）" />
+                                    <Button Grid.Column="3" Content="删除" Click="OnRemoveReadingClick" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="＋ 添加读音" Click="OnAddReadingClick" HorizontalAlignment="Left" />
+                </StackPanel>
+
+                <!-- 释义 -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="释义（必填）" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding Senses}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,4" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="180" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Text="{Binding Gloss, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             PlaceholderText="简洁准确的释义" />
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding ReadingOptions}"
+                                              SelectedItem="{Binding SelectedReading, Mode=TwoWay}"
+                                              PlaceholderText="归属读音（可选）" HorizontalAlignment="Stretch" />
+                                    <CheckBox Grid.Column="2" Content="已校对" IsChecked="{Binding IsVerified, Mode=TwoWay}" />
+                                    <Button Grid.Column="3" Content="删除" Click="OnRemoveSenseClick" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="＋ 添加释义" Click="OnAddSenseClick" HorizontalAlignment="Left" />
+                </StackPanel>
+
+                <!-- 例句 -->
+                <StackPanel Spacing="6">
+                    <TextBlock Text="例句（必填，词性写在例句上）" FontWeight="SemiBold" />
+                    <TextBlock Text="目标：每个「读音 × 词性」至少 2 条。手动录入不足只警告，不阻止保存。"
+                               Opacity="0.65" FontSize="12" />
+                    <ItemsControl ItemsSource="{Binding Examples}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,6" ColumnSpacing="8" RowSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <ComboBox ItemsSource="{Binding ReadingOptions}"
+                                              SelectedItem="{Binding SelectedReading, Mode=TwoWay}"
+                                              PlaceholderText="读音" HorizontalAlignment="Stretch" />
+                                    <TextBox Grid.Column="1" Text="{Binding PartOfSpeech, Mode=TwoWay}"
+                                             PlaceholderText="词性" />
+                                    <TextBlock Grid.Column="2" Text="例句原文" VerticalAlignment="Center" Opacity="0.5" FontSize="12" />
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6">
+                                        <CheckBox Content="已校对" IsChecked="{Binding IsVerified, Mode=TwoWay}" />
+                                        <Button Content="删除" Click="OnRemoveExampleClick" />
+                                    </StackPanel>
+
+                                    <TextBox Grid.Row="1" Grid.ColumnSpan="3"
+                                             Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             PlaceholderText="例句原文" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="60" />
+                                    <TextBox Grid.Row="1" Grid.Column="3" Width="260"
+                                             Text="{Binding Translation, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             PlaceholderText="译文 / 解释" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="60" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Content="＋ 添加例句" Click="OnAddExampleClick" HorizontalAlignment="Left" />
+                </StackPanel>
+
+                <Border Padding="12" CornerRadius="8" Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding ValidationSummary}" TextWrapping="Wrap" IsTextSelectionEnabled="True" />
+                        <TextBlock Text="{Binding CoverageSummary}" Opacity="0.7" TextWrapping="Wrap" FontSize="12" />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="检查" Click="OnValidateClick" />
+                    <Button Content="保存词条" Style="{StaticResource AccentButtonStyle}" Click="OnSaveClick" />
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

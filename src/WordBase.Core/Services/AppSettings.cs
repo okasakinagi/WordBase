@@ -78,16 +78,18 @@ public sealed class AppSettings
         set => Put("review.minMinutesBetweenNotifications", Math.Clamp(value, 1, 600));
     }
 
-    public TimeOnly QuietStart
+    /// <summary>允许提醒的时间窗起点（默认 08:00）。窗口之外不打扰。</summary>
+    public TimeOnly ActiveStart
     {
-        get => GetTime("review.quietStart", new TimeOnly(8, 0));
-        set => Put("review.quietStart", value.ToString("HH:mm", CultureInfo.InvariantCulture));
+        get => GetTime("review.activeStart", new TimeOnly(8, 0));
+        set => Put("review.activeStart", value.ToString("HH:mm", CultureInfo.InvariantCulture));
     }
 
-    public TimeOnly QuietEnd
+    /// <summary>允许提醒的时间窗终点（默认 23:00）。</summary>
+    public TimeOnly ActiveEnd
     {
-        get => GetTime("review.quietEnd", new TimeOnly(23, 0));
-        set => Put("review.quietEnd", value.ToString("HH:mm", CultureInfo.InvariantCulture));
+        get => GetTime("review.activeEnd", new TimeOnly(23, 0));
+        set => Put("review.activeEnd", value.ToString("HH:mm", CultureInfo.InvariantCulture));
     }
 
     public NotificationChannel Channel
@@ -147,13 +149,19 @@ public sealed class AppSettings
 
     public string? Raw(string key) => _cache.TryGetValue(key, out var v) ? v : null;
 
-    public bool IsQuietNow(DateTimeOffset now)
+    /// <summary>当前是否在允许提醒的时间窗内（支持跨零点，例如 22:00–02:00）。</summary>
+    public bool IsWithinActiveHours(DateTimeOffset now)
     {
-        var start = QuietStart;
-        var end = QuietEnd;
+        var start = ActiveStart;
+        var end = ActiveEnd;
         var current = TimeOnly.FromDateTime(now.LocalDateTime);
 
-        return start <= end
+        if (start == end)
+        {
+            return true;
+        }
+
+        return start < end
             ? current >= start && current < end
             : current >= start || current < end;
     }

@@ -2,7 +2,9 @@ using WordBase.Core.Models;
 
 namespace WordBase.Core.Quizzing;
 
-public sealed record QuizOption(string Text, bool IsCorrect);
+public sealed record QuizOption(string Text, bool IsCorrect, long? SourceEntryId = null);
+
+public sealed record Distractor(string Gloss, long EntryId);
 
 public sealed class QuizQuestion
 {
@@ -18,6 +20,10 @@ public static class QuizBuilder
 {
     /// <summary>从词条释义里出一道四选一。干扰项来自同语言的其他词条，尽量不重复。</summary>
     public static QuizQuestion? Build(Entry entry, IReadOnlyList<string> distractorGlosses, int optionCount = 4,
+        Random? rng = null) =>
+        Build(entry, distractorGlosses.Select(g => new Distractor(g, 0)).ToList(), optionCount, rng);
+
+    public static QuizQuestion? Build(Entry entry, IReadOnlyList<Distractor> distractors, int optionCount = 4,
         Random? rng = null)
     {
         rng ??= Random.Shared;
@@ -28,11 +34,10 @@ public static class QuizBuilder
             return null;
         }
 
-        var options = new List<string> { correct.Trim() };
-        foreach (var gloss in distractorGlosses
-                     .Select(g => (g ?? string.Empty).Trim())
-                     .Where(g => g.Length > 0)
-                     .Distinct(StringComparer.OrdinalIgnoreCase)
+        var options = new List<Distractor> { new(correct.Trim(), entry.Id) };
+        foreach (var distractor in distractors
+                     .Where(d => !string.IsNullOrWhiteSpace(d.Gloss))
+                     .DistinctBy(d => d.Gloss.Trim(), StringComparer.OrdinalIgnoreCase)
                      .OrderBy(_ => rng.Next()))
         {
             if (options.Count >= Math.Max(2, optionCount))
@@ -40,9 +45,10 @@ public static class QuizBuilder
                 break;
             }
 
-            if (!options.Contains(gloss, StringComparer.OrdinalIgnoreCase))
+            var text = distractor.Gloss.Trim();
+            if (!options.Any(o => string.Equals(o.Gloss, text, StringComparison.OrdinalIgnoreCase)))
             {
-                options.Add(gloss);
+                options.Add(new Distractor(text, distractor.EntryId));
             }
         }
 
@@ -59,7 +65,9 @@ public static class QuizBuilder
             Entry = entry,
             Prompt = entry.Term,
             Reading = reading,
-            Options = shuffled.Select(o => new QuizOption(o, string.Equals(o, correct.Trim(), StringComparison.OrdinalIgnoreCase)))
+            Options = shuffled
+                .Select(o => new QuizOption(o.Gloss, string.Equals(o.Gloss, correct.Trim(), StringComparison.OrdinalIgnoreCase),
+                    o.EntryId == entry.Id ? null : o.EntryId))
                 .ToList(),
         };
     }

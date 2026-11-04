@@ -4,7 +4,21 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="WordBase">
-    <Grid>
-        <TextBlock Text="WordBase bootstrap OK" HorizontalAlignment="Center" VerticalAlignment="Center" />
-    </Grid>
+
+    <NavigationView x:Name="Nav"
+                    PaneDisplayMode="Left"
+                    IsSettingsVisible="False"
+                    IsBackButtonVisible="Collapsed"
+                    IsPaneToggleButtonVisible="True"
+                    SelectionChanged="OnSelectionChanged">
+
+        <NavigationView.MenuItems>
+            <NavigationViewItem Content="录入 / 查词" Tag="editor" Icon="Add" />
+            <NavigationViewItem Content="词库" Tag="library" Icon="Library" />
+            <NavigationViewItem Content="复习" Tag="review" Icon="Clock" />
+            <NavigationViewItem Content="设置" Tag="settings" Icon="Setting" />
+        </NavigationView.MenuItems>
+
+        <Frame x:Name="ContentFrame" />
+    </NavigationView>
 </Window>
