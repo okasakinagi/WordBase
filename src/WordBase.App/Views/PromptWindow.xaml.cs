@@ -16,6 +16,11 @@ public sealed partial class PromptWindow : Window
     private const int DwmwcpRound = 2;
     private const int AutoCloseSeconds = 25;
 
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoActivate = 0x0010;
+    private static readonly IntPtr HwndTopmost = new(-1);
+
     /// <summary>卡片宽度（逻辑像素）。高度按内容自适应。</summary>
     private const double CardWidth = 420;
 
@@ -39,7 +44,11 @@ public sealed partial class PromptWindow : Window
         AppWindow.Resize(ToPhysical(CardWidth, readingMissing ? 190 : 230));
         PositionAtCorner();
 
-        ((FrameworkElement)Content).Loaded += (_, _) => FitToContent();
+        ((FrameworkElement)Content).Loaded += (_, _) =>
+        {
+            FitToContent();
+            ApplyTopmost();
+        };
         ((FrameworkElement)Content).SizeChanged += (_, _) => PositionAtCorner();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(AutoCloseSeconds) };
@@ -59,6 +68,25 @@ public sealed partial class PromptWindow : Window
         catch (Exception)
         {
             Activate();
+        }
+
+        ApplyTopmost();
+    }
+
+    /// <summary>
+    /// 只靠 OverlappedPresenter.IsAlwaysOnTop 不够稳：Show 之后、或 Resize/Move 之后
+    /// 可能被系统重置 z-order。这里再补一次 Win32 置顶，且不抢焦点。
+    /// </summary>
+    private void ApplyTopmost()
+    {
+        try
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            SetWindowPos(hwnd, HwndTopmost, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate);
+        }
+        catch (Exception)
+        {
+            // 失败也还有托管层的 IsAlwaysOnTop 兜底
         }
     }
 
@@ -185,4 +213,8 @@ public sealed partial class PromptWindow : Window
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(IntPtr hwnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int cx, int cy, uint flags);
 }
