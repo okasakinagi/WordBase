@@ -161,6 +161,10 @@ public partial class App : Application
                 Host.Scheduler?.NoteConfirmed(entryId);
                 StartReviewSession(entryId, presetKnown: false);
                 break;
+            case "open":
+                Host.Scheduler?.NoteConfirmed(entryId);
+                MainWindowInstance.ShowAndActivate();
+                break;
             default:
                 MainWindowInstance.ShowAndActivate();
                 break;

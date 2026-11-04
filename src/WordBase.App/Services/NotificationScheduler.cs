@@ -21,6 +21,7 @@ public sealed class NotificationScheduler : IDisposable
     private DateOnly _statDay = DateOnly.FromDateTime(DateTime.Now);
     private int _sentToday;
     private PendingPrompt? _pending;
+    private string? _lastBlockedReason;
 
     public NotificationScheduler(ReviewService review, NotificationService notifications, AppSettings settings,
         AppLogger logger, DispatcherQueue dispatcher)
@@ -91,24 +92,52 @@ public sealed class NotificationScheduler : IDisposable
             _logger.Info($"通知 {pending.EntryId} 在 10 分钟内没有交互回执，记为无响应");
         }
 
+        var due = _review.GetDue(1);
+        if (due.Count == 0)
+        {
+            _lastBlockedReason = null;
+            return;
+        }
+
+        var blocked = BlockedReason(now);
+        if (blocked is not null)
+        {
+            // 只在原因变化时记一次，避免每分钟刷日志
+            if (blocked != _lastBlockedReason)
+            {
+                _lastBlockedReason = blocked;
+                _logger.Info($"有到期词条，但本次提醒被拦下：{blocked}");
+            }
+
+            return;
+        }
+
+        _lastBlockedReason = null;
+        _ = PresentAsync(due[0]);
+    }
+
+    /// <summary>返回本次不能提醒的原因；null 表示可以提醒。</summary>
+    private string? BlockedReason(DateTimeOffset now)
+    {
         if (IsPaused || _settings.NotificationsPaused)
         {
-            return;
+            return "提醒已暂停";
         }
 
         if (_sentToday >= _settings.DailyLimit)
         {
-            return;
+            return $"已达到每日上限（{_sentToday}/{_settings.DailyLimit}）";
         }
 
-        if (now - _lastSentAt < TimeSpan.FromMinutes(_settings.MinMinutesBetweenNotifications))
+        var minGap = TimeSpan.FromMinutes(_settings.MinMinutesBetweenNotifications);
+        if (now - _lastSentAt < minGap)
         {
-            return;
+            return $"距上次提醒不足 {_settings.MinMinutesBetweenNotifications} 分钟";
         }
 
         if (!_settings.IsWithinActiveHours(now))
         {
-            return;
+            return $"不在允许提醒的时段（{_settings.ActiveStart:HH:mm}–{_settings.ActiveEnd:HH:mm}）";
         }
 
         while (_sentTimestamps.Count > 0 && now - _sentTimestamps.Peek() > TimeSpan.FromHours(1))
@@ -118,16 +147,10 @@ public sealed class NotificationScheduler : IDisposable
 
         if (_sentTimestamps.Count >= _settings.MaxNotificationsPerHour)
         {
-            return;
+            return $"已达每小时上限（{_settings.MaxNotificationsPerHour}）";
         }
 
-        var due = _review.GetDue(1);
-        if (due.Count == 0)
-        {
-            return;
-        }
-
-        _ = PresentAsync(due[0]);
+        return null;
     }
 
     public async Task<Entry?> TriggerNowAsync()
