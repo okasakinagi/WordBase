@@ -1,0 +1,27 @@
+## VS / .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.log
+
+## Publish output
+publish/
+dist/
+artifacts/
+
+## Runtime data (词库与密钥绝不入库)
+data/
+*.db
+*.db-shm
+*.db-wal
+*.db-journal
+config.json
+
+## OS
+Thumbs.db
+desktop.ini
+.DS_Store
