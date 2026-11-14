@@ -90,13 +90,16 @@
                         <TextBlock Text="目标保持率 (%)" VerticalAlignment="Center" />
                         <NumberBox Grid.Column="1" Value="{Binding DesiredRetentionPercent, Mode=TwoWay}"
                                    Minimum="70" Maximum="98" SmallChange="1" Width="110" SpinButtonPlacementMode="Compact" />
-                        <TextBlock Grid.Column="2" Text="到期时预计还能记住的比例，越高复习越频繁。" Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Text="到期时预计还能记住的比例，越高复习越频繁。"
+                                   Opacity="0.6" FontSize="12" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" MaxWidth="420" />
 
                         <TextBlock Grid.Row="1" Text="直接出选择题的概率 (%)" VerticalAlignment="Center" />
                         <NumberBox Grid.Row="1" Grid.Column="1" Value="{Binding DirectQuizProbabilityPercent, Mode=TwoWay}"
                                    Minimum="0" Maximum="100" SmallChange="5" Width="110" SpinButtonPlacementMode="Compact" />
                         <TextBlock Grid.Row="1" Grid.Column="2" Text="其余情况先问「认识 / 不认识」。选择题也可以直接在通知里作答。"
-                                   Opacity="0.6" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                   Opacity="0.6" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"
+                                   MaxWidth="420" />
 
                         <TextBlock Grid.Row="2" Text="每日复习上限" VerticalAlignment="Center" />
                         <NumberBox Grid.Row="2" Grid.Column="1" Value="{Binding DailyLimit, Mode=TwoWay}"
@@ -110,13 +113,15 @@
                         <NumberBox Grid.Row="4" Grid.Column="1" Value="{Binding MinBetweenMinutes, Mode=TwoWay}"
                                    Minimum="10" Maximum="600" SmallChange="5" Width="110" SpinButtonPlacementMode="Compact" />
                         <TextBlock Grid.Row="4" Grid.Column="2" Text="下限 10 分钟，避免一个接一个地弹。"
-                                   Opacity="0.6" FontSize="12" VerticalAlignment="Center" />
+                                   Opacity="0.6" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"
+                                   MaxWidth="420" />
 
                         <TextBlock Grid.Row="5" Text="批量汇总提醒间隔（分钟）" VerticalAlignment="Center" />
                         <NumberBox Grid.Row="5" Grid.Column="1" Value="{Binding BatchReminderMinutes, Mode=TwoWay}"
                                    Minimum="10" Maximum="1440" SmallChange="10" Width="110" SpinButtonPlacementMode="Compact" />
                         <TextBlock Grid.Row="5" Grid.Column="2" Text="到期超过 1 个时只发一条「有 N 个词待复习」，点开在主界面一次做完。"
-                                   Opacity="0.6" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                   Opacity="0.6" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"
+                                   MaxWidth="420" />
 
                         <TextBlock Grid.Row="6" Text="「稍后」时长（分钟）" VerticalAlignment="Center" />
                         <NumberBox Grid.Row="6" Grid.Column="1" Value="{Binding SnoozeMinutes, Mode=TwoWay}"
@@ -134,7 +139,7 @@
                                       OnContent="显示" OffContent="隐藏" MinWidth="0" />
                         <TextBlock Grid.Row="8" Grid.Column="2"
                                    Text="默认隐藏：日语给了假名基本等于给了答案。" Opacity="0.6" FontSize="12"
-                                   VerticalAlignment="Center" />
+                                   VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="420" />
                     </Grid>
                 </StackPanel>
             </Expander>
