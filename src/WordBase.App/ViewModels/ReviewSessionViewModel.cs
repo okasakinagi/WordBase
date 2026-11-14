@@ -33,6 +33,7 @@ public sealed partial class ReviewSessionViewModel : ObservableObject
 
     [ObservableProperty] private string prompt = string.Empty;
     [ObservableProperty] private string reading = string.Empty;
+    [ObservableProperty] private Visibility readingVisibility = Visibility.Visible;
     [ObservableProperty] private string progressText = string.Empty;
     [ObservableProperty] private string feedback = string.Empty;
     [ObservableProperty] private string answerTitle = "释义";
@@ -101,7 +102,12 @@ public sealed partial class ReviewSessionViewModel : ObservableObject
         _shownAt = DateTimeOffset.Now;
 
         Prompt = _current.Term;
+        // 提问阶段默认不显示读音：给了假名就等于泄题。设置里可以打开。
+        var showReading = _host.Settings.ShowReadingInReview;
         Reading = _current.ReadingsDisplay;
+        ReadingVisibility = showReading && !string.IsNullOrWhiteSpace(Reading)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
         ProgressText = $"第 {_index + 1} / {_queue.Count} 个 · 剩余 {RemainingCount}";
 
         SetStage(Stage.Choice);
@@ -246,6 +252,8 @@ public sealed partial class ReviewSessionViewModel : ObservableObject
         }
 
         SetStage(Stage.Reveal);
+        // 揭示后再显示读音（答案本来就包含它）
+        ReadingVisibility = string.IsNullOrWhiteSpace(Reading) ? Visibility.Collapsed : Visibility.Visible;
         RatingVisibility = showRating ? Visibility.Visible : Visibility.Collapsed;
         ContinueVisibility = showRating ? Visibility.Collapsed : Visibility.Visible;
 
@@ -268,6 +276,7 @@ public sealed partial class ReviewSessionViewModel : ObservableObject
         Summary = $"{text}（本次复习 {ReviewedCount} 个）";
         Prompt = "完成";
         Reading = string.Empty;
+        ReadingVisibility = Visibility.Collapsed;
         ProgressText = string.Empty;
         SessionCompleted?.Invoke();
     }

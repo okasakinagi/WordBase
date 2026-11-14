@@ -70,7 +70,8 @@
                 <StackPanel Spacing="16" MaxWidth="860" HorizontalAlignment="Left">
 
                     <TextBlock Text="{Binding Prompt}" FontSize="40" FontWeight="SemiBold" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding Reading}" FontSize="17" Opacity="0.7" />
+                    <TextBlock Text="{Binding Reading}" FontSize="17" Opacity="0.7"
+                               Visibility="{Binding ReadingVisibility}" />
 
                     <InfoBar IsOpen="True" IsClosable="False" Severity="Success"
                              Message="{Binding Feedback}"

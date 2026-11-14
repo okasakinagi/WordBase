@@ -31,6 +31,10 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [ObservableProperty] private double desiredRetentionPercent;
     [ObservableProperty] private double quizProbabilityPercent;
+    [ObservableProperty] private double directQuizProbabilityPercent;
+    [ObservableProperty] private bool showReadingInReview;
+    [ObservableProperty] private double batchReminderMinutes;
+    [ObservableProperty] private double snoozeMinutes;
     [ObservableProperty] private double dailyLimit;
     [ObservableProperty] private double maxPerHour;
     [ObservableProperty] private double minBetweenMinutes;
@@ -60,6 +64,10 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         DesiredRetentionPercent = Math.Round(settings.DesiredRetention * 100);
         QuizProbabilityPercent = Math.Round(settings.QuizProbability * 100);
+        DirectQuizProbabilityPercent = Math.Round(settings.DirectQuizProbability * 100);
+        ShowReadingInReview = settings.ShowReadingInReview;
+        BatchReminderMinutes = settings.BatchReminderMinutes;
+        SnoozeMinutes = settings.SnoozeMinutes;
         DailyLimit = settings.DailyLimit;
         MaxPerHour = settings.MaxNotificationsPerHour;
         MinBetweenMinutes = settings.MinMinutesBetweenNotifications;
@@ -92,6 +100,10 @@ public sealed partial class SettingsViewModel : ObservableObject
 
         settings.DesiredRetention = DesiredRetentionPercent / 100.0;
         settings.QuizProbability = QuizProbabilityPercent / 100.0;
+        settings.DirectQuizProbability = DirectQuizProbabilityPercent / 100.0;
+        settings.ShowReadingInReview = ShowReadingInReview;
+        settings.BatchReminderMinutes = (int)BatchReminderMinutes;
+        settings.SnoozeMinutes = (int)SnoozeMinutes;
         settings.DailyLimit = (int)DailyLimit;
         settings.MaxNotificationsPerHour = (int)MaxPerHour;
         settings.MinMinutesBetweenNotifications = (int)MinBetweenMinutes;

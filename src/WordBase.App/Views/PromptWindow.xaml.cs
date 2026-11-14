@@ -7,7 +7,7 @@ using Windows.Graphics;
 namespace WordBase.App.Views;
 
 /// <summary>
-/// 原生通知被系统吞掉时的兜底提醒：无标题栏的浮动卡片，位于工作区右下角、不抢焦点、25 秒自动收起。
+/// 原生通知被系统吞掉时的兜底提醒：无标题栏的浮动卡片，位于工作区右下角、不抢焦点、置顶、25 秒自动收起。
 /// 视觉上与主窗口一致（同一套 Fluent 画笔与系统圆角），并作为进入完整复习的入口。
 /// </summary>
 public sealed partial class PromptWindow : Window
@@ -25,39 +25,69 @@ public sealed partial class PromptWindow : Window
     private const double CardWidth = 420;
 
     private readonly TaskCompletionSource<string?> _result = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private readonly DispatcherTimer _timer;
+    private DispatcherTimer? _timer;
     private bool _closed;
 
-    public PromptWindow(Entry entry)
+    /// <summary>单词提醒卡片。showReading 为 false 时不显示读音，避免用假名反推词义。</summary>
+    public PromptWindow(Entry entry, bool showReading)
     {
         InitializeComponent();
+
+        HeadlineText.Text = "该复习了";
         TermText.Text = entry.Term;
-        ReadingText.Text = entry.ReadingsDisplay;
+        BodyText.Text = "点任意按钮都会进入完整复习（含释义、例句与选择题）";
 
-        var readingMissing = string.IsNullOrWhiteSpace(entry.ReadingsDisplay);
-        ReadingText.Visibility = readingMissing ? Visibility.Collapsed : Visibility.Visible;
+        var reading = showReading ? entry.ReadingsDisplay : string.Empty;
+        ReadingText.Text = reading;
+        ReadingText.Visibility = string.IsNullOrWhiteSpace(reading) ? Visibility.Collapsed : Visibility.Visible;
 
+        KnownButton.Visibility = Visibility.Visible;
+        UnknownButton.Visibility = Visibility.Visible;
+        UnknownButton.Content = "不认识";
+
+        ShowCard();
+    }
+
+    /// <summary>批量汇总卡片：告诉用户有多少词等着，点开始回主界面做。</summary>
+    public PromptWindow(int dueCount)
+    {
+        InitializeComponent();
+
+        HeadlineText.Text = "有词待复习";
+        TermText.Text = $"{dueCount} 个词到期";
+        ReadingText.Visibility = Visibility.Collapsed;
+        BodyText.Text = "在主界面一次做完，比一个个提醒更省事。";
+
+        UnknownButton.Visibility = Visibility.Collapsed;
+        KnownButton.Content = "开始复习";
+
+        ShowCard();
+    }
+
+    public Task<string?> Result => _result.Task;
+
+    private void ShowCard()
+    {
         MakeBorderless();
         ApplyRoundedCorners();
 
         // 先给个粗略尺寸，等布局完成再按内容收口，避免高 DPI 下内容被压扁
-        AppWindow.Resize(ToPhysical(CardWidth, readingMissing ? 190 : 230));
+        AppWindow.Resize(ToPhysical(CardWidth, 230));
         PositionAtCorner();
 
-        ((FrameworkElement)Content).Loaded += (_, _) =>
+        var root = (FrameworkElement)Content;
+        root.Loaded += (_, _) =>
         {
             FitToContent();
             ApplyTopmost();
         };
-        ((FrameworkElement)Content).SizeChanged += (_, _) => PositionAtCorner();
+        root.SizeChanged += (_, _) => PositionAtCorner();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(AutoCloseSeconds) };
         _timer.Tick += (_, _) => Complete(null);
         _timer.Start();
         Closed += OnClosed;
     }
-
-    public Task<string?> Result => _result.Task;
 
     public void ShowWithoutActivation()
     {
@@ -71,23 +101,6 @@ public sealed partial class PromptWindow : Window
         }
 
         ApplyTopmost();
-    }
-
-    /// <summary>
-    /// 只靠 OverlappedPresenter.IsAlwaysOnTop 不够稳：Show 之后、或 Resize/Move 之后
-    /// 可能被系统重置 z-order。这里再补一次 Win32 置顶，且不抢焦点。
-    /// </summary>
-    private void ApplyTopmost()
-    {
-        try
-        {
-            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-            SetWindowPos(hwnd, HwndTopmost, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate);
-        }
-        catch (Exception)
-        {
-            // 失败也还有托管层的 IsAlwaysOnTop 兜底
-        }
     }
 
     private void MakeBorderless()
@@ -114,6 +127,23 @@ public sealed partial class PromptWindow : Window
         catch (Exception)
         {
             // 旧系统不支持就保持直角，不影响功能
+        }
+    }
+
+    /// <summary>
+    /// 只靠 OverlappedPresenter.IsAlwaysOnTop 不够稳：Show 之后、或 Resize/Move 之后
+    /// 可能被系统重置 z-order。这里再补一次 Win32 置顶，且不抢焦点。
+    /// </summary>
+    private void ApplyTopmost()
+    {
+        try
+        {
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            SetWindowPos(hwnd, HwndTopmost, 0, 0, 0, 0, SwpNoMove | SwpNoSize | SwpNoActivate);
+        }
+        catch (Exception)
+        {
+            // 失败也还有托管层的 IsAlwaysOnTop 兜底
         }
     }
 
@@ -191,7 +221,7 @@ public sealed partial class PromptWindow : Window
         }
 
         _closed = true;
-        _timer.Stop();
+        _timer?.Stop();
         _result.TrySetResult(action);
         Close();
     }
@@ -204,7 +234,7 @@ public sealed partial class PromptWindow : Window
         }
 
         _closed = true;
-        _timer.Stop();
+        _timer?.Stop();
         _result.TrySetResult(null);
     }
 

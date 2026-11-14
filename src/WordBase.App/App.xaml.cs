@@ -36,9 +36,19 @@ public partial class App : Application
         WireTray(Host.Tray);
 
         Host.AttachUiServices(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread(), Host.Tray);
-        Host.Scheduler!.FallbackPresenter = entry => MainWindowInstance.ShowFallbackPromptAsync(entry);
-        Host.Scheduler.Start();
-        Host.Scheduler.Pause(Host.Settings.NotificationsPaused);
+
+        var scheduler = Host.Scheduler!;
+        scheduler.FallbackPresenter = (entry, showReading) =>
+            MainWindowInstance.ShowFallbackPromptAsync(entry, showReading);
+        scheduler.FallbackSummaryPresenter = count => MainWindowInstance.ShowFallbackSummaryAsync(count);
+        scheduler.OpenReviewRequested = (entryId, presetKnown) =>
+        {
+            MainWindowInstance.ShowAndActivate();
+            StartReviewSession(entryId, presetKnown);
+        };
+
+        scheduler.Start();
+        scheduler.Pause(Host.Settings.NotificationsPaused);
 
         try
         {
@@ -144,30 +154,13 @@ public partial class App : Application
     /// <summary>原生通知按钮 / 自绘卡片按钮的统一入口。</summary>
     public static void HandlePromptAction(PromptAction prompt)
     {
-        if (prompt.EntryId is not { } entryId)
+        if (Host.Scheduler is { } scheduler)
         {
-            MainWindowInstance.ShowAndActivate();
+            scheduler.Handle(prompt);
             return;
         }
 
-        switch (prompt.Action)
-        {
-            case "known":
-                Host.Scheduler?.NoteConfirmed(entryId);
-                StartReviewSession(entryId, presetKnown: true);
-                break;
-            case "unknown":
-                Host.Scheduler?.NoteConfirmed(entryId);
-                StartReviewSession(entryId, presetKnown: false);
-                break;
-            case "open":
-                Host.Scheduler?.NoteConfirmed(entryId);
-                MainWindowInstance.ShowAndActivate();
-                break;
-            default:
-                MainWindowInstance.ShowAndActivate();
-                break;
-        }
+        MainWindowInstance.ShowAndActivate();
     }
 
     public static void StartReviewSession(long? entryId = null, bool? presetKnown = null)

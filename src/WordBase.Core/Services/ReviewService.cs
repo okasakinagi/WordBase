@@ -35,6 +35,8 @@ public sealed class ReviewService
 
     public IReadOnlyList<Entry> GetDue(int limit = 20) => _store.GetDue(_clock(), limit);
 
+    public Entry? GetEntry(long id) => _store.Get(id);
+
     public int CountDue() => _store.CountDue(_clock());
 
     public EntryStats Stats() => _store.GetStats(_clock());

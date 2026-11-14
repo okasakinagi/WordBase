@@ -60,6 +60,34 @@ public sealed class AppSettings
         set => Put("review.quizProbability", Math.Clamp(value, 0, 1));
     }
 
+    /// <summary>提问时是否显示读音/假名。默认关：显示了假名就等于泄题。</summary>
+    public bool ShowReadingInReview
+    {
+        get => GetBool("review.showReading", false);
+        set => Put("review.showReading", value);
+    }
+
+    /// <summary>直接出选择题（跳过「认识/不认识」）的概率。</summary>
+    public double DirectQuizProbability
+    {
+        get => GetDouble("review.directQuizProbability", 0.5);
+        set => Put("review.directQuizProbability", Math.Clamp(value, 0, 1));
+    }
+
+    /// <summary>批量汇总提醒的最小间隔（分钟）。比单词提醒长，避免整天重复弹同一件事。</summary>
+    public int BatchReminderMinutes
+    {
+        get => GetInt("review.batchReminderMinutes", 60);
+        set => Put("review.batchReminderMinutes", Math.Clamp(value, 10, 1440));
+    }
+
+    /// <summary>点「稍后」后静默多少分钟。</summary>
+    public int SnoozeMinutes
+    {
+        get => GetInt("review.snoozeMinutes", 10);
+        set => Put("review.snoozeMinutes", Math.Clamp(value, 1, 240));
+    }
+
     public int DailyLimit
     {
         get => GetInt("review.dailyLimit", 60);
@@ -75,7 +103,7 @@ public sealed class AppSettings
     public int MinMinutesBetweenNotifications
     {
         get => GetInt("review.minMinutesBetweenNotifications", 15);
-        set => Put("review.minMinutesBetweenNotifications", Math.Clamp(value, 1, 600));
+        set => Put("review.minMinutesBetweenNotifications", Math.Clamp(value, 10, 600));
     }
 
     /// <summary>允许提醒的时间窗起点（默认 08:00）。窗口之外不打扰。</summary>

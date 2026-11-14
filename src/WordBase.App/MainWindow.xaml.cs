@@ -148,9 +148,9 @@ public sealed partial class MainWindow : Window
     }
 
     /// <summary>自绘卡片的兜底通道：展示后按用户选择继续走同一套复习逻辑。</summary>
-    public async Task ShowFallbackPromptAsync(Entry entry)
+    public async Task ShowFallbackPromptAsync(Entry entry, bool showReading)
     {
-        var window = new PromptWindow(entry);
+        var window = new PromptWindow(entry, showReading);
         window.ShowWithoutActivation();
 
         var action = await window.Result;
@@ -160,5 +160,18 @@ public sealed partial class MainWindow : Window
         }
 
         App.HandlePromptAction(Services.PromptAction.Simple(action, entry.Id));
+    }
+
+    /// <summary>批量汇总的兜底卡片。</summary>
+    public async Task ShowFallbackSummaryAsync(int dueCount)
+    {
+        var window = new PromptWindow(dueCount);
+        window.ShowWithoutActivation();
+
+        var action = await window.Result;
+        if (action is not null)
+        {
+            App.HandlePromptAction(Services.PromptAction.Simple(action, null));
+        }
     }
 }
