@@ -24,7 +24,7 @@ public sealed class AppHost : IDisposable
         Review = new ReviewService(Entries, BuildScheduler(), clock: () => DateTimeOffset.Now);
         Autostart = new AutostartService(logger);
         Notifications = new NotificationService(logger, Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico"));
-        Backups = new BackupService(paths, logger);
+        Backups = new DatabaseBackup(paths.DataDirectory, paths.BackupDirectory, db, logger.Info);
     }
 
     public AppPaths Paths { get; }
@@ -38,7 +38,7 @@ public sealed class AppHost : IDisposable
     public ReviewService Review { get; }
     public AutostartService Autostart { get; }
     public NotificationService Notifications { get; }
-    public BackupService Backups { get; }
+    public DatabaseBackup Backups { get; }
     public TrayIconService? Tray { get; set; }
     public NotificationScheduler? Scheduler { get; private set; }
 
